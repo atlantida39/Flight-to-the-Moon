@@ -136,6 +136,6 @@ def poehali(lat, h_z):
             s = 1
             q = 0
             
-    O = the_end(r, fi, v, 51.67, 128.1)
+    O = the_end(r, fi, v, lat, long)
     
     return m[i] - s*q, t * dt, O[0], O[1], O[2], O[3]
