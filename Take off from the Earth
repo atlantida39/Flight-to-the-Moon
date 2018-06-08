@@ -1,95 +1,141 @@
-from math import *
-#данные для барометрической формулы:
-m_m = 0.00482
-T = 284.9
-g = 9.8
-p0 = 1.1673 #начальная плотность атмосферы
-k_m = 1.38
-#коэффициенты в силе сопротивления:
-Cx = 0.85
-z = 34580.4# m0 / S
+import math
 
-x_0 = 0
-x = 0
-h = 0
-h_0 = 0
-v0 = 0
-v0_y = 0
-v0_x = 0
-v_x = 0
-dt = 0.01# время интергирования
-V = 7900 # конечная скорость
-v_0 =  465.1013 # учитывая скорость вращения Земли(на экваторе)
-M = 2766700# начальная масса ракеты
-# масса топлива ступеней
-m1 = 2010000
-m2 = 421100
-m3 = 100000
-m = [m1, m2, m3]
-# сила тяги
-F1 = 34350000
-F2 = 5115000
-F3 = 1016000
-F = [F1, F2, F3]
-# расход топлива м/с
-u1 = 2580
-u2 = 4130
-u3 = 4130
-# масса ступеней
-m_1 = 135000
-m_2 = 37600
-m_3 = 20000
-m_s = [m_1, m_2, m_3]
-k = [F1 / u1, F2 / u2, F3 / u3]
-s = 1 # счетчик
-i = 0
-q = 0
-c = 0
-n = 0
+def the_end(r, fi, v, lat, long):# перевод в общую СО
+    # проекции в моей СO
+    lat = math.radians(lat)# широта
+    long = math.radians(long)# долгота
+    y = r * math.cos(fi) + R
+    x = r * math.sin(fi)
+    Fi = math.acos(y / math.hypot(x, y))
+    v_x = v * math.sin(Fi)
+    v_y = v * math.cos(Fi)
+    # поворот моей СО к обшей (учитывая широту и долготу космодрома)
+    X = x * math.cos(lat) * math.cos(long) + y * math.sin(long)
+    Y = y * math.cos(long) - x * math.cos(lat) * math.sin(long)
+    V_x = v_x * math.cos(lat) * math.cos(long) + v_y * math.sin(long)
+    V_y = v_y * math.cos(long) - v_x * math.cos(lat) * math.sin(long)
+    
+    return X, Y, V_x, V_y
+    
 
+def poehali(lat, long, h_z):
+    #данные для барометрической формулы:
+    m_m = 0.00482
+    T = 284.9
+    g = 9.8
+    p0 = 1.1673 #начальная плотность атмосферы
+    k_m = 1.38
+    #коэффициенты в силе сопротивления:
+    Cx = 0.85
+    z = 34580.4 # m0 / S
 
-while v_x < V:
-    while h <= 10000:
-        q = k[i] * dt
-        M_t = M - s * q # масса, зависящая от времени
-        Fs = Cx * p0 * exp (- m_m * g * h / k_m / (T - c * 6.5) ) / z  # сила сопротивления
-        F_t = M_t * g # сила тяжести
-        a = (F[i] - F_t - Fs) / M_t 
-        v = a * dt + v0 
-        h = h_0 + (v0)* dt + a * dt ** 2 / 2
-        v0 = v
-        h_0 = h
-        s += 1
-        c += 0.13
-        if a > 10 * g:
-            print('such a big acceleraion', a)
+    x_0 = 0
+    x = 0
+    h = 0
+    h_0 = 0
+    v0 = 0
+    v0_y = 0
+    v_x = 0
+    global R
+    R = 6.37 * 10 ** 6# радиус Земли
+    w = 39.3 * 10 ** 13# гравитационная постоянная * масса Земли
+    dt = 0.01# время интергирования
+    V = 7782 # конечная скорость
+    omega = 7.292 * 10 ** (-2)
+    lat = math.radians(lat)# широта
+    # учитывая скорость вращения Земли(в зависимости от широты, h_z, км - высота над уровнем моря)
+    v_0 = omega * (40544306 / (40408906 + 40680159.6 * (math.tan(lat)) ** 2) ** 0.5 \
+    + 40408906 * h_z /(40408906 ** 2 + (40680159.6 ** 2) * (math.tan(lat)) ** 2) ** 0.5)
+    M = 2766700# начальная масса ракеты
+    # масса топлива ступеней
+    m1 = 2010000
+    m2 = 421100
+    m3 = 100000
+    m = [m1, m2, m3]
+    # сила тяги
+    F1 = 34350000
+    F2 = 5115000
+    F3 = 1016000
+    F = [F1, F2, F3]
+    # расход топлива м/с
+    u1 = 2580
+    u2 = 4130
+    u3 = 4130
+    # масса ступеней
+    m_1 = 135000
+    m_2 = 37600
+    m_3 = 20000
+    m_s = [m_1, m_2, m_3]
+    k = [F1 / u1, F2 / u2, F3 / u3]
+    s = 1 # счетчик
+    i = 0
+    q = 0
+    c = 0
+    n = 0
+    P = 0
+    v = 0
+    fi = 0
+    r_0 = 0
+    r = 0
+    t = 0
 
-    if s * q < m[i]:
-        s += 1
-        n += 0.16196573
-        alfa = 0.0175 * dt
-        q = k[i] * dt
-        M_t = M - s * q
-        Fs = Cx * p0 * exp (- m_m * g * h / k_m / (T - c * 6.5) ) / z
-        F_t = M_t * g
-        a_x = (F[i] - Fs)/M_t
-        a_y = (F[i] - Fs - F_t/ cos(n * alfa))/ M_t
-        v_x = v0_x + a_x * dt
-        v_y = a_y * dt + v0_y 
-        h_0 = h
-        h = h_0 + (v0_y) * dt + a_y * dt ** 2 / 2
-        x = x_0 + v0_x * dt + a_x * dt ** 2/2
-        x_0 = x
-        v0_y = v_y
-        v0_x = v_x
-        if a_y > 10 * g:
-            print('such a big acceleraion', a_y)
+    while v < V:
+        while r_0 <= 8000:
+            q = k[i] * dt
+            M_t = M - s * q # масса, зависящая от времени
+            Fs = Cx * p0 * math.exp (- m_m * g * h / k_m / (T - c * 6.5) ) / z  # сила сопротивления
+            g = w / (R + h_0) ** 2
+            F_t = M_t * g # сила тяжести
+            a = (F[i] - Fs - F_t * math.cos (fi)) / M_t 
+            v_y = a * dt + v0_y
+            v0_x = v_0
+            x = x_0 + v0_x * dt
+            v = math.hypot(v_0, v_y)
+            h = h_0 + v_y * dt
+            r_0 = math.hypot(h, x) 
+            v0_y = v_y
+            h_0 = h
+            x_0 = x
+            fi_0 = math.acos(h / math.hypot(x, h_0))
+            s += 1
+            c += 0.13
+            
 
+        if s * q < m[i]:
         
-    else:
-        M = M - m_s[i] - m[i]
-        i += 1
-        s = 1
-        q = 0
-       
-print(x, h)
+            s += 1
+            n += 1
+            alfa = 0.0067 * dt
+            
+            if r >= 185000:
+                alfa = 1.57079
+                n = 1
+
+            v0_fi = v * math.sin(n * alfa)
+            v0_r = v * math.cos(n * alfa)
+            q = k[i] * dt
+            M_t = M - s * q
+            g = w / (R + h_0) ** 2
+            Fs = Cx * p0 * math.exp (-m_m * g * h / k_m / (T - c * 6.5) ) / z
+            F_t = M_t * g
+            a_fi = (F[i] - Fs) * math.sin(n * alfa) / M_t
+            a_r = ((F[i] - Fs) * math.cos(n * alfa) - F_t) / M_t
+            v_fi = v0_fi + a_fi * dt
+            v_r = a_r * dt + v0_r
+            v = math.hypot(v_fi, v_r)
+            r = v_r * dt + r_0
+            fi = v_fi * dt / r_0 + fi_0
+            r_0 = r
+           
+            
+        
+        else:
+            M = M - m_s[i] - m[i]
+            i += 1
+            t += s 
+            s = 1
+            q = 0
+            
+    O = the_end(r, fi, v, lat, long)
+    
+    return m[i] - s*q, t * dt, O[0], O[1], O[2], O[3]
