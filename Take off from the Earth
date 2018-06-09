@@ -1,141 +1,197 @@
 import math
 
-def the_end(r, fi, v, lat, long):# перевод в общую СО
-    # проекции в моей СO
-    lat = math.radians(lat)# широта
-    long = math.radians(long)# долгота
-    y = r * math.cos(fi) + R
-    x = r * math.sin(fi)
-    Fi = math.acos(y / math.hypot(x, y))
-    v_x = v * math.sin(Fi)
-    v_y = v * math.cos(Fi)
-    # поворот моей СО к обшей (учитывая широту и долготу космодрома)
-    X = x * math.cos(lat) * math.cos(long) + y * math.sin(long)
-    Y = y * math.cos(long) - x * math.cos(lat) * math.sin(long)
-    V_x = v_x * math.cos(lat) * math.cos(long) + v_y * math.sin(long)
-    V_y = v_y * math.cos(long) - v_x * math.cos(lat) * math.sin(long)
+#данные для барометрической формулы:
+m_m = 0.00482 * 10 ** (-23) # масса молекул воздуха, г
+T = 284.9 # температура, К
+p0 = 1.1673 #начальная плотность атмосферы, г/см ** 3
+k_m = 1.38 * 10 ** (-23) # постоянная Больцмана
+#коэффициенты в силе сопротивления:
+Cx = 0.85
+z = 34580.4# M / S
+v_0 = 465.1# скорость Земли на экваторе, м/с
+dt = 0.01# время интергирования, с
+V = 7782 # конечная скорость, м/с
+M = 2766700# начальная масса ракеты, кг
+w = 39.3 * 10 ** 13# гравитационная постоянная * масса Земли
+R = 6.37 * 10 ** 6# радиус Земли, м
+# масса топлива ступеней, кг
+m1 = 2010000
+m2 = 421100
+m3 = 100000
+m = [m1, m2, m3]
+# сила тяги, Н
+F1 = 34350000
+F2 = 5115000
+F3 = 1016000
+F = [F1, F2, F3]
+# расход топлива м/с
+u1 = 2580
+u2 = 4130
+u3 = 4130
+# масса ступеней, кг
+m_1 = 135000
+m_2 = 37600
+m_3 = 20000
+m_s = [m_1, m_2, m_3]
+k = [F1 / u1, F2 / u2, F3 / u3]
+# начальные данные
+x_0 = 0
+x = 0
+h = 0
+h_0 = 0
+v0 = 0
+v0_y = 0
+v_x = 0
+fi = 0
+q = 0
+t = 0
+# счетчики
+s = 1
+i = 0
+c = 0
+n = 0
+
+
+def poehali(s, v0_y, x_0, h_0): # взлетаю вертикально вверх
+
+    q = k[i] * dt
+    M_t = M - s * q # масса, зависящая от времени
+    g = w / (R + h_0) ** 2
+    Fs = Cx * p0 * math.exp (- m_m * g * h_0 / k_m / (T - c * 6.5) ) / z  # сила сопротивления
+    F_t = M_t * g # сила тяжести
+    a = (F[i] - Fs - F_t * math.cos (fi)) / M_t
+    v_y = a * dt + v0_y
+    x = x_0 + v_0 * dt
+    v = math.hypot(v_0, v_y)
+    h = h_0 + v_y * dt
+    r = math.hypot(h, x)
+    fi_0 = math.acos(h / math.hypot(x, h))
     
-    return X, Y, V_x, V_y
+    return v_y, x, h, r, v, fi_0
+
+
+def dostigenie_h(s, c, v0_y, x_0, h_0):
     
-
-def poehali(lat, long, h_z):
-    #данные для барометрической формулы:
-    m_m = 0.00482
-    T = 284.9
-    g = 9.8
-    p0 = 1.1673 #начальная плотность атмосферы
-    k_m = 1.38
-    #коэффициенты в силе сопротивления:
-    Cx = 0.85
-    z = 34580.4 # m0 / S
-
-    x_0 = 0
-    x = 0
-    h = 0
-    h_0 = 0
-    v0 = 0
-    v0_y = 0
-    v_x = 0
-    global R
-    R = 6.37 * 10 ** 6# радиус Земли
-    w = 39.3 * 10 ** 13# гравитационная постоянная * масса Земли
-    dt = 0.01# время интергирования
-    V = 7782 # конечная скорость
-    omega = 7.292 * 10 ** (-2)
-    lat = math.radians(lat)# широта
-    # учитывая скорость вращения Земли(в зависимости от широты, h_z, км - высота над уровнем моря)
-    v_0 = omega * (40544306 / (40408906 + 40680159.6 * (math.tan(lat)) ** 2) ** 0.5 \
-    + 40408906 * h_z /(40408906 ** 2 + (40680159.6 ** 2) * (math.tan(lat)) ** 2) ** 0.5)
-    M = 2766700# начальная масса ракеты
-    # масса топлива ступеней
-    m1 = 2010000
-    m2 = 421100
-    m3 = 100000
-    m = [m1, m2, m3]
-    # сила тяги
-    F1 = 34350000
-    F2 = 5115000
-    F3 = 1016000
-    F = [F1, F2, F3]
-    # расход топлива м/с
-    u1 = 2580
-    u2 = 4130
-    u3 = 4130
-    # масса ступеней
-    m_1 = 135000
-    m_2 = 37600
-    m_3 = 20000
-    m_s = [m_1, m_2, m_3]
-    k = [F1 / u1, F2 / u2, F3 / u3]
-    s = 1 # счетчик
-    i = 0
-    q = 0
-    c = 0
-    n = 0
-    P = 0
-    v = 0
-    fi = 0
-    r_0 = 0
-    r = 0
-    t = 0
-
-    while v < V:
-        while r_0 <= 8000:
-            q = k[i] * dt
-            M_t = M - s * q # масса, зависящая от времени
-            Fs = Cx * p0 * math.exp (- m_m * g * h / k_m / (T - c * 6.5) ) / z  # сила сопротивления
-            g = w / (R + h_0) ** 2
-            F_t = M_t * g # сила тяжести
-            a = (F[i] - Fs - F_t * math.cos (fi)) / M_t 
-            v_y = a * dt + v0_y
-            v0_x = v_0
-            x = x_0 + v0_x * dt
-            v = math.hypot(v_0, v_y)
-            h = h_0 + v_y * dt
-            r_0 = math.hypot(h, x) 
-            v0_y = v_y
-            h_0 = h
-            x_0 = x
-            fi_0 = math.acos(h / math.hypot(x, h_0))
-            s += 1
-            c += 0.13
-            
-
-        if s * q < m[i]:
+    P = poehali(s, v0_y, x_0, h_0)
+    while P[3] <= 10000:
         
-            s += 1
-            n += 1
-            alfa = 0.0067 * dt
-            
-            if r >= 185000:
-                alfa = 1.57079
-                n = 1
+        s += 1
+        c += 0.13
+        v0_y = P[0]
+        x_0 = P[1]
+        h_0 = P[2]
+        P = poehali(s, v0_y, x_0, h_0)
+        
+    return P[3], P[4], P[5], s # r, v, fi_0
 
-            v0_fi = v * math.sin(n * alfa)
-            v0_r = v * math.cos(n * alfa)
-            q = k[i] * dt
-            M_t = M - s * q
-            g = w / (R + h_0) ** 2
-            Fs = Cx * p0 * math.exp (-m_m * g * h / k_m / (T - c * 6.5) ) / z
-            F_t = M_t * g
-            a_fi = (F[i] - Fs) * math.sin(n * alfa) / M_t
-            a_r = ((F[i] - Fs) * math.cos(n * alfa) - F_t) / M_t
-            v_fi = v0_fi + a_fi * dt
-            v_r = a_r * dt + v0_r
-            v = math.hypot(v_fi, v_r)
-            r = v_r * dt + r_0
-            fi = v_fi * dt / r_0 + fi_0
-            r_0 = r
+
+def checking_r(r):# достигли орбиты?
+    
+    if r >= 185000:
+        alfa = 1.57079
+        return alfa
+
+    else:
+        return True
+
+    
+def abeam_poehali(i, v, r_0, fi_0, s, n, M): # движение под углом
+
+    q = k[i] * dt
+    M_t = M - s * q
+    g = w / (R + (r_0 * math.sin(fi_0))) ** 2
+    Fs = Cx * p0 * math.exp (-m_m * g * r_0 * math.sin(fi_0) / k_m / (T - c * 6.5) ) / z
+    F_t = M_t * g
+    
+    C = checking_r(r_0)
+    
+    if C == True:
+
+        alfa = 0.0067 * dt
+        v0_fi = v * math.sin(n * alfa)
+        v0_r = v * math.cos(n * alfa)
+        a_fi = (F[i] - Fs) * math.sin(n * alfa) / M_t
+        a_r = ((F[i] - Fs) * math.cos(n * alfa) - F_t) / M_t
+        v_fi = v0_fi + a_fi * dt
+        v_r = a_r * dt + v0_r
+        v = math.hypot(v_fi, v_r)
+        r = v_r * dt + r_0
+        fi = v_fi * dt / r_0 + fi_0
+        
+    else:
+        
+        alfa = C
+        v0_fi = v * math.sin(n * alfa)
+        v0_r = v * math.cos(n * alfa)
+        a_fi = (F[i] - Fs) * math.sin(n * alfa) / M_t
+        a_r = ((F[i] - Fs) * math.cos(n * alfa) - F_t) / M_t
+        v_fi = v0_fi + a_fi * dt
+        v_r = a_r * dt + v0_r
+        v = math.hypot(v_fi, v_r)
+        r = v_r * dt + r_0
+        fi = v_fi * dt / r_0 + fi_0
            
-            
-        
-        else:
-            M = M - m_s[i] - m[i]
-            i += 1
-            t += s 
-            s = 1
-            q = 0
-            
-    O = the_end(r, fi, v, lat, long)
+    return v_r, q, r, v_fi, fi, m[i] - s * q
+
+
+def ending_mass(s, i, M):# проверка массы
+
+    q = k[i] * dt
+    if s * q > m[i]:
+
     
-    return m[i] - s*q, t * dt, O[0], O[1], O[2], O[3]
+        M = M - m_s[i] - m[i]
+        i += 1
+        
+        return M, i
+    
+    else:
+        return True
+
+
+def arrival_in(i, v, r_0, fi_0, s, n, t, M):# достижение нужной скорости
+    
+    while abeam_poehali(i, v, r_0, fi_0, s, n, M)[3] <= V:
+
+        A = abeam_poehali(i, v, r_0, fi_0, s, n, M)
+        C = checking_r(A[2])
+        E = ending_mass(s, i, M)
+        if E == True:
+            
+            r_0 = A[2]
+            v = math.hypot(A[0], A[3])
+            s += 1
+            
+            if C == True:
+                n += 1
+            else:
+                n = 1 
+        
+            
+        else:
+            i = E[1]
+            M = E[0]
+            t += s
+            s = 1
+            
+
+    return A[3], A[2], A[4], (t + s) * dt, A[5] # v_fi, r, fi, конечная масса
+
+def projection(r, v_fi, fi):# перевод в общую СО
+
+    y = r * math.sin(fi) + R
+    x = r * math.cos(fi)
+    Fi = math.atan(x / y)
+    v_x = v_fi * math.sin(Fi)
+    v_y = v_fi * math.cos(Fi)
+
+    return x, y, v_x, v_y, math.degrees(Fi)
+    
+def main():
+    
+    D = dostigenie_h(s, c, v0_y, x_0, h_0)
+    A = arrival_in(i, D[1], D[0], D[2], D[3], n, t, M)
+    P = projection(A[1], A[0], A[2])
+    print(P, A[3], A[4])
+
+main()
